@@ -1,0 +1,142 @@
+.dashboard-wrap {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 32px 20px;
+}
+
+.new-doc-form {
+    background: white;
+    padding: 18px 20px;
+    border-radius: 10px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    margin-bottom: 36px;
+    display: flex;
+    gap: 10px;
+}
+
+.new-doc-form input {
+    flex: 1;
+    padding: 10px 14px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.new-doc-form input:focus { border-color: #4285f4; }
+
+.section-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 14px;
+    font-size: 14px;
+    font-weight: 700;
+    color: #555;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.section-header .count {
+    background: #e8eaf6;
+    color: #3949ab;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 10px;
+}
+
+.doc-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 36px;
+}
+
+.doc-item {
+    background: white;
+    padding: 16px 20px;
+    border-radius: 10px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    transition: box-shadow 0.2s, transform 0.1s;
+}
+
+.doc-item:hover {
+    box-shadow: 0 3px 12px rgba(0,0,0,0.13);
+    transform: translateY(-1px);
+}
+
+.doc-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.doc-info h3 {
+    font-size: 15px;
+    color: #222;
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.doc-info .meta {
+    font-size: 12px;
+    color: #888;
+}
+
+.badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 10px;
+    margin-left: 6px;
+}
+
+.badge-edit  { background: #e6f4ea; color: #2e7d32; }
+.badge-view  { background: #fff8e1; color: #f57f17; }
+.badge-owner { background: #e3f2fd; color: #1565c0; }
+
+.doc-actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 48px 20px;
+    background: white;
+    border-radius: 10px;
+    border: 2px dashed #e0e0e0;
+    color: #bbb;
+    margin-bottom: 36px;
+}
+
+.empty-state .icon { font-size: 48px; margin-bottom: 14px; }
+
+.empty-state p {
+    font-size: 15px;
+    color: #aaa;
+    margin-bottom: 6px;
+}
+
+.empty-state small {
+    font-size: 12px;
+    color: #ccc;
+}
+
+.alert-success-box {
+    background: #e6f4ea;
+    color: #2e7d32;
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    font-size: 14px;
+}
