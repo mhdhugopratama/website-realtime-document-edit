@@ -5,6 +5,11 @@
 @push('head')
 @endpush
 
+@section('styles')
+    <link rel="stylesheet" href="{{ asset('css/editor.css') }}">
+@endsection
+
+@section('content')
 
     <div class="editor-toolbar">
         <a href="{{ route('dashboard') }}" class="btn-back">Kembali</a>
