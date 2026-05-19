@@ -53,16 +53,19 @@
 
     <div class="editor-main">
 
-        <div class="editor-area" id="editor-area" style="padding: 20px;">
-            <textarea id="editor" data-doc-id="{{ $document->id }}" data-current-user="{{ Auth::id() }}"
-                data-can-edit="{{ $bisaEdit ? '1' : '0' }}" data-is-owner="{{ $adalahPemilik ? '1' : '0' }}"
-                data-share-url="{{ route('document.share', $document->id) }}"
-                data-remove-share-url="{{ url('/documents/' . $document->id . '/shares') }}"
-                data-update-url="{{ route('document.update', $document->id) }}"
-                data-heartbeat-url="{{ route('document.heartbeat', $document->id) }}"
-                data-poll-url="{{ route('document.poll', $document->id) }}"
-                data-version-url="{{ route('document.saveVersion', $document->id) }}" data-csrf="{{ csrf_token() }}"
-                class="txt-editor" placeholder="Mulai mengetik di sini..." {{ $bisaEdit ? '' : 'readonly' }}>{{ $document->content }}</textarea>
+        <div class="editor-area" id="editor-area" style="padding: 20px; display: flex; justify-content: center;">
+            <div style="position: relative; width: 100%; max-width: 900px; display: flex; flex: 1;">
+                <textarea id="editor" data-doc-id="{{ $document->id }}" data-current-user="{{ Auth::id() }}"
+                    data-can-edit="{{ $bisaEdit ? '1' : '0' }}" data-is-owner="{{ $adalahPemilik ? '1' : '0' }}"
+                    data-share-url="{{ route('document.share', $document->id) }}"
+                    data-remove-share-url="{{ url('/documents/' . $document->id . '/shares') }}"
+                    data-update-url="{{ route('document.update', $document->id) }}"
+                    data-heartbeat-url="{{ route('document.heartbeat', $document->id) }}"
+                    data-poll-url="{{ route('document.poll', $document->id) }}"
+                    data-version-url="{{ route('document.saveVersion', $document->id) }}" data-csrf="{{ csrf_token() }}"
+                    class="txt-editor" placeholder="Mulai mengetik di sini..." {{ $bisaEdit ? '' : 'readonly' }}>{{ $document->content }}</textarea>
+                <div id="cursor-overlay" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; z-index: 50; overflow: hidden; border-radius: 4px;"></div>
+            </div>
         </div>
 
         <div class="sidebar">
@@ -212,6 +215,7 @@
         let judulKonflikMasuk = '';
 
         let waktuSimpanTerakhir = 0;
+        let userTerkini = null;
 
         if (bisaEdit) {
             editorEl.addEventListener('input', () => {
@@ -228,7 +232,7 @@
                     sedangMengetik = false;
                     simpanOtomatis();
                     waktuSimpanTerakhir = Date.now();
-                }, 800);
+                }, 400);
             });
         }
 
@@ -239,7 +243,7 @@
             timerMengetik = setTimeout(() => {
                 sedangMengetik = false;
                 simpanOtomatis();
-            }, 800);
+            }, 400);
         });
 
         async function simpanOtomatis() {
@@ -319,6 +323,7 @@
                 const data = await res.json();
 
                 perbaruiDaftarOnline(data.online_users, data.current_user_id);
+                tampilkanKursorRemote(data.online_users, data.current_user_id);
 
                 if (data.updated_at_timestamp && data.updated_at_timestamp > timestampTerakhir) {
                     if (data.last_editor && data.last_editor.id !== idUserSekarang) {
@@ -335,6 +340,9 @@
                 if (!sedangMengetik && data.content !== kontenTerakhir) {
                     const selStart = editorEl.selectionStart;
                     const selEnd = editorEl.selectionEnd;
+                    const isFocused = document.activeElement === editorEl;
+                    
+                    const lengthDiff = data.content.length - kontenTerakhir.length;
                     
                     editorEl.value = data.content;
                     kontenTerakhir = data.content;
@@ -344,8 +352,11 @@
                         judulTerakhir = data.title;
                     }
                     
-                    if (document.activeElement === editorEl) {
-                        editorEl.setSelectionRange(selStart, selEnd);
+                    if (isFocused) {
+                        editorEl.setSelectionRange(
+                            Math.max(0, selStart + lengthDiff), 
+                            Math.max(0, selEnd + lengthDiff)
+                        );
                     }
 
                     statusSimpan.textContent = '↺ Diperbarui ' + data.updated_at;
@@ -354,7 +365,46 @@
             } catch (e) {}
         }
 
+        let kursorTopSaya = 0;
+        let kursorLeftSaya = 0;
+
+        function dapatkanKoordinatKursor(element) {
+            let div = document.createElement('div');
+            document.body.appendChild(div);
+
+            const style = window.getComputedStyle(element);
+            div.style.position = 'absolute';
+            div.style.top = '0';
+            div.style.left = '-9999px';
+            div.style.whiteSpace = 'pre-wrap';
+            div.style.wordWrap = 'break-word';
+            
+            const properties = ['fontFamily', 'fontSize', 'fontWeight', 'fontStyle', 'letterSpacing', 'textTransform', 'wordSpacing', 'textIndent', 'lineHeight', 'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft', 'borderTopWidth', 'borderRightWidth', 'borderBottomWidth', 'borderLeftWidth', 'boxSizing'];
+            properties.forEach(prop => div.style[prop] = style[prop]);
+            
+            div.style.width = element.offsetWidth + 'px';
+            
+            div.textContent = element.value.substring(0, element.selectionEnd);
+            
+            const span = document.createElement('span');
+            span.textContent = element.value.substring(element.selectionEnd) || '.';
+            div.appendChild(span);
+            
+            const coordinates = {
+                top: span.offsetTop,
+                left: span.offsetLeft,
+            };
+            
+            document.body.removeChild(div);
+            return coordinates;
+        }
+
         async function kirimStatusOnline() {
+            if (document.activeElement === editorEl) {
+                const pos = dapatkanKoordinatKursor(editorEl);
+                kursorTopSaya = pos.top;
+                kursorLeftSaya = pos.left;
+            }
             try {
                 await fetch(heartbeatUrl, {
                     method: 'POST',
@@ -363,8 +413,8 @@
                         'X-CSRF-TOKEN': tokenCsrf,
                     },
                     body: JSON.stringify({
-                        cursor_top: 0,
-                        cursor_left: 0,
+                        cursor_top: kursorTopSaya,
+                        cursor_left: kursorLeftSaya,
                     }),
                 });
             } catch (e) {}
@@ -390,8 +440,67 @@
             daftarOnline.innerHTML = html;
         }
 
-        setInterval(kirimStatusOnline, 1000);
-        setInterval(cekPembaruanServer, 1000);
+        function tampilkanKursorRemote(users, myId) {
+            const overlay = document.getElementById('cursor-overlay');
+            if (!overlay) return;
+
+            const activeIds = new Set();
+
+            if (users) {
+                users.forEach(user => {
+                    if (user.id === myId) return;
+                    if (user.cursor_top == null || user.cursor_left == null) return;
+                    if (user.cursor_top === 0 && user.cursor_left === 0) return;
+
+                    activeIds.add(user.id);
+                    const cursorId = 'cursor-user-' + user.id;
+                    let cursorEl = document.getElementById(cursorId);
+
+                    if (!cursorEl) {
+                        const color = getUserColor(user.id);
+                        cursorEl = document.createElement('div');
+                        cursorEl.id = cursorId;
+                        cursorEl.className = 'remote-cursor';
+
+                        const label = document.createElement('div');
+                        label.className = 'remote-cursor-label';
+                        label.textContent = user.name;
+                        label.style.background = color;
+
+                        const caret = document.createElement('div');
+                        caret.className = 'remote-cursor-caret';
+                        caret.style.background = color;
+
+                        cursorEl.appendChild(label);
+                        cursorEl.appendChild(caret);
+                        overlay.appendChild(cursorEl);
+                    }
+
+                    cursorEl.style.top = (user.cursor_top - editorEl.scrollTop) + 'px';
+                    cursorEl.style.left = (user.cursor_left - editorEl.scrollLeft) + 'px';
+                });
+            }
+
+            userTerkini = users;
+
+            Array.from(overlay.children).forEach(child => {
+                if (child.id && child.id.startsWith('cursor-user-')) {
+                    const idStr = child.id.replace('cursor-user-', '');
+                    if (!activeIds.has(parseInt(idStr))) {
+                        overlay.removeChild(child);
+                    }
+                }
+            });
+        }
+
+        editorEl.addEventListener('scroll', () => {
+            if (userTerkini) {
+                tampilkanKursorRemote(userTerkini, idUserSekarang);
+            }
+        });
+
+        setInterval(kirimStatusOnline, 600);
+        setInterval(cekPembaruanServer, 600);
         kirimStatusOnline();
         cekPembaruanServer();
 
