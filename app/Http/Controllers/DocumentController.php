@@ -16,18 +16,18 @@ use PhpOffice\PhpWord\Shared\Html;
 
 class DocumentController extends Controller
 {
-    private function getPermission(Document $document)
+    private function cekAkses(Document $dokumen)
     {
-        $userId = Auth::id();
+        $idUser = Auth::id();
 
-        if ($document->owner_id === $userId) {
+        if ($dokumen->owner_id === $idUser) {
             return 'owner';
         }
 
-        $share = $document->shares()->where('user_id', $userId)->first();
+        $akses = $dokumen->shares()->where('user_id', $idUser)->first();
 
-        if ($share) {
-            return $share->permission;
+        if ($akses) {
+            return $akses->permission;
         }
 
         return null;
@@ -35,27 +35,27 @@ class DocumentController extends Controller
 
     public function index()
     {
-        $userId = Auth::id();
+        $idUser = Auth::id();
 
-        $myDocs = Document::with('owner')
-            ->where('owner_id', $userId)
+        $dokumenPribadi = Document::with('owner')
+            ->where('owner_id', $idUser)
             ->latest()
             ->get();
 
-        $sharedDocs = Document::with(['owner', 'shares'])
-            ->whereHas('shares', function($q) use ($userId) {
-                $q->where('user_id', $userId);
+        $dokumenDibagikan = Document::with(['owner', 'shares'])
+            ->whereHas('shares', function($query) use ($idUser) {
+                $query->where('user_id', $idUser);
             })
             ->latest()
             ->get()
-            ->map(function ($doc) use ($userId) {
-                $doc->my_permission = $doc->shares
-                    ->where('user_id', $userId)
+            ->map(function ($dokumen) use ($idUser) {
+                $dokumen->hak_akses = $dokumen->shares
+                    ->where('user_id', $idUser)
                     ->first()->permission ?? null;
-                return $doc;
+                return $dokumen;
             });
 
-        return view('dashboard', compact('myDocs', 'sharedDocs'));
+        return view('dashboard', compact('dokumenPribadi', 'dokumenDibagikan'));
     }
 
     public function store(Request $request)
@@ -64,43 +64,43 @@ class DocumentController extends Controller
             'title' => 'required|string|max:255',
         ]);
 
-        $document = Document::create([
+        $dokumenBaru = Document::create([
             'title' => $request->title,
             'content' => '',
             'owner_id' => Auth::id(),
         ]);
 
-        return redirect()->route('document.edit', $document->id);
+        return redirect()->route('document.edit', $dokumenBaru->id);
     }
 
     public function edit(Document $document)
     {
-        $permission = $this->getPermission($document);
+        $hakAkses = $this->cekAkses($document);
 
-        if ($permission === null) {
+        if ($hakAkses === null) {
             abort(403, 'Kamu tidak memiliki akses ke dokumen ini. Minta pemilik untuk membagikannya.');
         }
 
-        $canEdit = in_array($permission, ['owner', 'edit']);
-        $isOwner = $permission === 'owner';
+        $bisaEdit = in_array($hakAkses, ['owner', 'edit']);
+        $adalahPemilik = $hakAkses === 'owner';
 
-        $versions = $document->versions()->with('savedBy')->get();
+        $riwayatVersi = $document->versions()->with('savedBy')->get();
 
-        if ($isOwner) {
-            $shares = $document->shares()->with('user')->get();
+        if ($adalahPemilik) {
+            $daftarAkses = $document->shares()->with('user')->get();
         } else {
-            $shares = collect();
+            $daftarAkses = collect();
         }
 
-        return view('document.edit', compact('document', 'versions', 'canEdit', 'isOwner', 'shares'));
+        return view('document.edit', compact('document', 'riwayatVersi', 'bisaEdit', 'adalahPemilik', 'daftarAkses'));
     }
 
     public function update(Request $request, Document $document)
     {
-        $permission = $this->getPermission($document);
+        $hakAkses = $this->cekAkses($document);
 
-        if (!in_array($permission, ['owner', 'edit'])) {
-            return response()->json(['error' => 'Tidak punya izin edit'], 403);
+        if (!in_array($hakAkses, ['owner', 'edit'])) {
+            return response()->json(['error' => 'Akses ditolak'], 403);
         }
 
         $request->validate([
@@ -113,10 +113,7 @@ class DocumentController extends Controller
             'title' => $request->title ?? $document->title,
         ]);
 
-        \Illuminate\Support\Facades\Cache::put('doc_last_editor_'.$document->id, [
-            'id' => Auth::id(),
-            'name' => Auth::user()->name,
-        ], now()->addHours(2));
+        \Illuminate\Support\Facades\Cache::put('doc_last_editor_'.$document->id, Auth::id(), now()->addHours(2));
 
         return response()->json([
             'success' => true,
@@ -125,22 +122,46 @@ class DocumentController extends Controller
         ]);
     }
 
-    public function saveVersion(Document $document)
+    public function saveVersion(Request $request, Document $document)
     {
-        $permission = $this->getPermission($document);
+        $hakAkses = $this->cekAkses($document);
 
-        if (!in_array($permission, ['owner', 'edit'])) {
-            return response()->json(['error' => 'Tidak punya izin'], 403);
+        if (!in_array($hakAkses, ['owner', 'edit'])) {
+            return response()->json(['error' => 'Akses ditolak'], 403);
         }
 
-        DocumentVersion::create([
+        $versiBaru = DocumentVersion::create([
             'document_id' => $document->id,
             'saved_by' => Auth::id(),
-            'content' => $document->content,
             'title' => $document->title,
+            'content' => $document->content,
         ]);
 
-        return response()->json(['success' => true, 'message' => 'Versi berhasil disimpan!']);
+        $versiBaru->load('savedBy');
+
+        return response()->json([
+            'success' => true,
+            'version' => [
+                'id' => $versiBaru->id,
+                'title' => $versiBaru->title,
+                'saved_by_name' => $versiBaru->savedBy->name,
+                'created_at' => $versiBaru->created_at->format('d M Y, H:i')
+            ]
+        ]);
+    }
+
+    public function getVersion(DocumentVersion $version)
+    {
+        $hakAkses = $this->cekAkses($version->document);
+
+        if ($hakAkses === null) {
+            abort(403);
+        }
+
+        return response()->json([
+            'title' => $version->title,
+            'content' => $version->content
+        ]);
     }
 
     public function restoreVersion(Document $document, DocumentVersion $version)
@@ -160,18 +181,18 @@ class DocumentController extends Controller
 
     public function destroy(Document $document)
     {
-        if ($document->owner_id !== Auth::id()) {
+        $hakAkses = $this->cekAkses($document);
+        if ($hakAkses !== 'owner') {
             abort(403);
         }
 
         $document->delete();
-
-        return redirect()->route('dashboard')->with('success', 'Dokumen berhasil dihapus!');
+        return redirect()->route('dashboard');
     }
 
     public function exportPdf(Document $document)
     {
-        if ($this->getPermission($document) === null) {
+        if ($this->cekAkses($document) === null) {
             abort(403);
         }
 
@@ -192,7 +213,7 @@ class DocumentController extends Controller
 
     public function exportTxt(Document $document)
     {
-        if ($this->getPermission($document) === null) {
+        if ($this->cekAkses($document) === null) {
             abort(403);
         }
 
@@ -204,49 +225,53 @@ class DocumentController extends Controller
             ->header('Content-Disposition', 'attachment; filename="' . $filename . '.txt"');
     }
 
-    public function share(Request $request, Document $document)
+    public function addShare(Request $request, Document $document)
     {
-        if ($document->owner_id !== Auth::id()) {
-            return response()->json(['error' => 'Hanya pemilik yang bisa berbagi'], 403);
+        $hakAkses = $this->cekAkses($document);
+        if ($hakAkses !== 'owner') {
+            return response()->json(['success' => false, 'error' => 'Unauthorized']);
         }
 
         $request->validate([
-            'email' => 'required|email|exists:users,email',
-            'permission' => 'required|in:view,edit',
+            'email' => 'required|email',
+            'permission' => 'required|in:view,edit'
         ]);
 
-        $targetUser = User::where('email', $request->email)->first();
+        $userDituju = User::where('email', $request->email)->first();
+        if (!$userDituju) {
+            return response()->json(['success' => false, 'error' => 'User tidak ditemukan']);
+        }
 
-        if ($targetUser->id === Auth::id()) {
-            return response()->json(['error' => 'Tidak bisa berbagi ke diri sendiri'], 422);
+        if ($userDituju->id === $document->owner_id) {
+            return response()->json(['success' => false, 'error' => 'Tidak bisa membagikan ke pemilik dokumen']);
         }
 
         DocumentShare::updateOrCreate(
-            ['document_id' => $document->id, 'user_id' => $targetUser->id],
+            ['document_id' => $document->id, 'user_id' => $userDituju->id],
             ['permission' => $request->permission]
         );
 
         return response()->json([
             'success' => true,
-            'message' => "Berhasil dibagikan ke {$targetUser->name}",
-            'share' => [
-                'user_id' => $targetUser->id,
-                'name' => $targetUser->name,
-                'email' => $targetUser->email,
-                'permission' => $request->permission,
+            'user' => [
+                'id' => $userDituju->id,
+                'name' => $userDituju->name,
+                'email' => $userDituju->email,
+                'initial' => strtoupper(substr($userDituju->name, 0, 1)),
+                'color' => ['#ea4335', '#4285f4', '#fbbc05', '#34a853', '#9c27b0', '#ff5722'][$userDituju->id % 6]
             ],
+            'permission' => $request->permission
         ]);
     }
 
     public function removeShare(Document $document, User $user)
     {
-        if ($document->owner_id !== Auth::id()) {
-            return response()->json(['error' => 'Hanya pemilik yang bisa mengubah akses'], 403);
+        $hakAkses = $this->cekAkses($document);
+        if ($hakAkses !== 'owner') {
+            return response()->json(['success' => false, 'error' => 'Unauthorized']);
         }
 
-        DocumentShare::where('document_id', $document->id)
-            ->where('user_id', $user->id)
-            ->delete();
+        $document->shares()->where('user_id', $user->id)->delete();
 
         return response()->json(['success' => true]);
     }
@@ -271,16 +296,13 @@ class DocumentController extends Controller
 
     public function heartbeat(Request $request, Document $document)
     {
-        if ($this->getPermission($document) === null) {
-            return response()->json(['error' => 'Forbidden'], 403);
-        }
-
+        $idUser = Auth::id();
         DocumentOnlineUser::updateOrCreate(
-            ['document_id' => $document->id, 'user_id' => Auth::id()],
+            ['document_id' => $document->id, 'user_id' => $idUser],
             [
                 'last_seen_at' => now(),
-                'cursor_top' => $request->cursor_top,
-                'cursor_left' => $request->cursor_left,
+                'cursor_top' => $request->cursor_top ?? 0,
+                'cursor_left' => $request->cursor_left ?? 0,
             ]
         );
 
@@ -289,34 +311,33 @@ class DocumentController extends Controller
 
     public function poll(Document $document)
     {
-        if ($this->getPermission($document) === null) {
-            return response()->json(['error' => 'Forbidden'], 403);
-        }
+        $idUser = Auth::id();
 
-        $onlineUsers = DocumentOnlineUser::where('document_id', $document->id)
+        $penggunaOnline = DocumentOnlineUser::where('document_id', $document->id)
             ->where('last_seen_at', '>=', now()->subSeconds(10))
             ->with('user')
             ->get()
-            ->map(function($ou) {
+            ->map(function($online) {
                 return [
-                    'id' => $ou->user->id,
-                    'name' => $ou->user->name,
-                    'cursor_top' => $ou->cursor_top,
-                    'cursor_left' => $ou->cursor_left,
+                    'id' => $online->user->id,
+                    'name' => $online->user->name,
+                    'cursor_top' => $online->cursor_top,
+                    'cursor_left' => $online->cursor_left,
                 ];
             });
 
-        $doc = $document->fresh();
-        $lastEditor = \Illuminate\Support\Facades\Cache::get('doc_last_editor_'.$document->id);
+        $dokumenTerbaru = $document->fresh();
+        $pengeditTerakhirId = \Illuminate\Support\Facades\Cache::get('doc_last_editor_'.$document->id);
+        $pengeditTerakhir = $pengeditTerakhirId ? User::find($pengeditTerakhirId) : null;
 
         return response()->json([
-            'content' => $doc->content,
-            'title' => $doc->title,
-            'updated_at' => $doc->updated_at->diffForHumans(),
-            'updated_at_timestamp' => $doc->updated_at->timestamp,
-            'last_editor' => $lastEditor,
-            'online_users' => $onlineUsers,
-            'current_user_id' => Auth::id(),
+            'content' => $dokumenTerbaru->content,
+            'title' => $dokumenTerbaru->title,
+            'updated_at' => $dokumenTerbaru->updated_at->format('H:i:s'),
+            'updated_at_timestamp' => $dokumenTerbaru->updated_at->timestamp,
+            'online_users' => $penggunaOnline,
+            'current_user_id' => $idUser,
+            'last_editor' => $pengeditTerakhir ? ['id' => $pengeditTerakhir->id, 'name' => $pengeditTerakhir->name] : null
         ]);
     }
 }
