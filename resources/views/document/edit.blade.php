@@ -318,8 +318,25 @@
 
         async function cekPembaruanServer() {
             if (modeKonflik) return;
+            
+            if (document.activeElement === editorEl) {
+                const pos = dapatkanKoordinatKursor(editorEl);
+                kursorTopSaya = pos.top;
+                kursorLeftSaya = pos.left;
+            }
+
             try {
-                const res = await fetch(pollUrl);
+                const res = await fetch(pollUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': tokenCsrf,
+                    },
+                    body: JSON.stringify({
+                        cursor_top: kursorTopSaya,
+                        cursor_left: kursorLeftSaya,
+                    }),
+                });
                 const data = await res.json();
 
                 perbaruiDaftarOnline(data.online_users, data.current_user_id);
@@ -399,26 +416,7 @@
             return coordinates;
         }
 
-        async function kirimStatusOnline() {
-            if (document.activeElement === editorEl) {
-                const pos = dapatkanKoordinatKursor(editorEl);
-                kursorTopSaya = pos.top;
-                kursorLeftSaya = pos.left;
-            }
-            try {
-                await fetch(heartbeatUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': tokenCsrf,
-                    },
-                    body: JSON.stringify({
-                        cursor_top: kursorTopSaya,
-                        cursor_left: kursorLeftSaya,
-                    }),
-                });
-            } catch (e) {}
-        }
+
 
         function perbaruiDaftarOnline(users, myId) {
             if (!users || users.length === 0) {
@@ -499,9 +497,7 @@
             }
         });
 
-        setInterval(kirimStatusOnline, 600);
-        setInterval(cekPembaruanServer, 600);
-        kirimStatusOnline();
+        setInterval(cekPembaruanServer, 1000);
         cekPembaruanServer();
 
         async function simpanVersi() {

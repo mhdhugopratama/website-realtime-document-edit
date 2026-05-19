@@ -309,12 +309,23 @@ class DocumentController extends Controller
         return response()->json(['success' => true]);
     }
 
-    public function poll(Document $document)
+    public function poll(Request $request, Document $document)
     {
         $idUser = Auth::id();
 
+        // 1. Lakukan update status online & kursor (Heartbeat terintegrasi)
+        DocumentOnlineUser::updateOrCreate(
+            ['document_id' => $document->id, 'user_id' => $idUser],
+            [
+                'last_seen_at' => now(),
+                'cursor_top' => $request->cursor_top ?? 0,
+                'cursor_left' => $request->cursor_left ?? 0,
+            ]
+        );
+
+        // 2. Ambil daftar pengguna online (aktif dalam 6 detik terakhir)
         $penggunaOnline = DocumentOnlineUser::where('document_id', $document->id)
-            ->where('last_seen_at', '>=', now()->subSeconds(10))
+            ->where('last_seen_at', '>=', now()->subSeconds(6))
             ->with('user')
             ->get()
             ->map(function($online) {
@@ -326,6 +337,7 @@ class DocumentController extends Controller
                 ];
             });
 
+        // 3. Ambil data dokumen terbaru dengan efisien
         $dokumenTerbaru = $document->fresh();
         $pengeditTerakhirId = \Illuminate\Support\Facades\Cache::get('doc_last_editor_'.$document->id);
         $pengeditTerakhir = $pengeditTerakhirId ? User::find($pengeditTerakhirId) : null;

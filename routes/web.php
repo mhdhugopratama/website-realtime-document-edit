@@ -45,5 +45,5 @@ Route::middleware('auth')->group(function () {
 
     Route::post('/api/documents/{document}/update',    [DocumentController::class, 'update'])->name('document.update');
     Route::post('/api/documents/{document}/heartbeat', [DocumentController::class, 'heartbeat'])->name('document.heartbeat');
-    Route::get('/api/documents/{document}/poll',       [DocumentController::class, 'poll'])->name('document.poll');
+    Route::post('/api/documents/{document}/poll',       [DocumentController::class, 'poll'])->name('document.poll');
 });
