@@ -3,106 +3,7 @@
 
 
 @push('head')
-    <script src="https://unpkg.com/@ckeditor/ckeditor5-build-classic@38.1.1/build/ckeditor.js"></script>
 @endpush
-
-@section('styles')
-    <link rel="stylesheet" href="{{ asset('css/editor.css') }}">
-@endsection
-
-@section('content')
-
-
-    <div class="layout-toolbar" id="layout-toolbar">
-
-
-        <div class="lt-group">
-            <label class="lt-label">Kertas</label>
-            <select id="lt-paper" onchange="applyPageLayout()" title="Ukuran Kertas">
-                <option value="a4">A4</option>
-                <option value="a3">A3</option>
-                <option value="a5">A5</option>
-                <option value="letter">Letter</option>
-                <option value="legal">Legal</option>
-            </select>
-        </div>
-
-        <div class="lt-sep"></div>
-
-
-        <div class="lt-group">
-            <label class="lt-label">Orientasi</label>
-            <div class="lt-btn-group">
-                <button id="lt-portrait" class="lt-btn active" onclick="setOrientation('portrait')" title="Portrait">
-                    <svg width="12" height="16" viewBox="0 0 12 16">
-                        <rect x="1" y="1" width="10" height="14" rx="1" fill="none" stroke="currentColor"
-                            stroke-width="1.5" />
-                    </svg>
-                </button>
-                <button id="lt-landscape" class="lt-btn" onclick="setOrientation('landscape')" title="Landscape">
-                    <svg width="16" height="12" viewBox="0 0 16 12">
-                        <rect x="1" y="1" width="14" height="10" rx="1" fill="none" stroke="currentColor"
-                            stroke-width="1.5" />
-                    </svg>
-                </button>
-            </div>
-        </div>
-
-        <div class="lt-sep"></div>
-
-
-        <div class="lt-group">
-            <label class="lt-label">Margin</label>
-            <select id="lt-margin" onchange="applyPageLayout()" title="Margin">
-                <option value="normal">Normal (2.54 cm)</option>
-                <option value="narrow">Sempit (1.27 cm)</option>
-                <option value="wide">Lebar (2.54/5.08 cm)</option>
-                <option value="none">Tanpa Margin</option>
-            </select>
-        </div>
-
-        <div class="lt-sep"></div>
-
-
-        <div class="lt-group">
-            <label class="lt-label">Spasi</label>
-            <select id="lt-spacing" onchange="applyPageLayout()" title="Spasi Baris">
-                <option value="1.0">1.0</option>
-                <option value="1.15">1.15</option>
-                <option value="1.5" selected>1.5</option>
-                <option value="2.0">2.0</option>
-                <option value="2.5">2.5</option>
-            </select>
-        </div>
-
-        <div class="lt-sep"></div>
-
-
-        <div class="lt-group">
-            <label class="lt-label">Zoom</label>
-            <div style="display:flex; align-items:center; gap:5px;">
-                <button class="lt-zoom-btn" onclick="adjustZoom(-10)">&#8722;</button>
-                <span id="lt-zoom-val" style="font-size:12px; min-width:36px; text-align:center;">100%</span>
-                <button class="lt-zoom-btn" onclick="adjustZoom(10)">&#43;</button>
-            </div>
-        </div>
-        <div class="lt-sep"></div>
-
-        <div class="lt-group">
-            <label class="lt-label">Font</label>
-            <select id="lt-font" onchange="applyPageLayout()" title="Font">
-                <option value="'Times New Roman', serif">Times New Roman</option>
-                <option value="'Arial', sans-serif">Arial</option>
-                <option value="'Calibri', sans-serif">Calibri</option>
-                <option value="'Georgia', serif">Georgia</option>
-                <option value="'Verdana', sans-serif">Verdana</option>
-                <option value="'Trebuchet MS', sans-serif">Trebuchet MS</option>
-                <option value="'Courier New', monospace">Courier New</option>
-                <option value="'Tahoma', sans-serif">Tahoma</option>
-            </select>
-        </div>
-
-    </div>
 
 
     <div class="editor-toolbar">
@@ -132,9 +33,9 @@
             PDF
         </a>
 
-        <a href="{{ route('document.exportWord', $document->id) }}" class="btn-export btn-export-word"
-            title="Unduh sebagai Word (.docx)">
-            DOCX
+        <a href="{{ route('document.exportTxt', $document->id) }}" class="btn-export btn-export-word"
+            title="Unduh sebagai TXT">
+            TXT
         </a>
     </div>
 
@@ -147,16 +48,16 @@
 
     <div class="editor-main">
 
-        <div class="editor-area" id="editor-area">
-            <div id="editor" data-doc-id="{{ $document->id }}" data-current-user="{{ Auth::id() }}"
+        <div class="editor-area" id="editor-area" style="padding: 20px;">
+            <textarea id="editor" data-doc-id="{{ $document->id }}" data-current-user="{{ Auth::id() }}"
                 data-can-edit="{{ $canEdit ? '1' : '0' }}" data-is-owner="{{ $isOwner ? '1' : '0' }}"
                 data-share-url="{{ route('document.share', $document->id) }}"
                 data-remove-share-url="{{ url('/documents/' . $document->id . '/shares') }}"
                 data-update-url="{{ route('document.update', $document->id) }}"
                 data-heartbeat-url="{{ route('document.heartbeat', $document->id) }}"
                 data-poll-url="{{ route('document.poll', $document->id) }}"
-                data-version-url="{{ route('document.saveVersion', $document->id) }}" data-csrf="{{ csrf_token() }}">
-                {!! $document->content !!}</div>
+                data-version-url="{{ route('document.saveVersion', $document->id) }}" data-csrf="{{ csrf_token() }}"
+                class="txt-editor" placeholder="Mulai mengetik di sini..." {{ $canEdit ? '' : 'readonly' }}>{{ $document->content }}</textarea>
         </div>
 
         <div class="sidebar">
@@ -196,6 +97,22 @@
 
 
     <div class="toast" id="toast"></div>
+
+    <div class="modal-overlay" id="conflict-modal">
+        <div class="modal-box" style="max-width:400px;">
+            <div class="modal-head" style="background:#ea4335; color:white;">
+                <h3 style="margin:0;">Peringatan Konflik!</h3>
+            </div>
+            <div class="modal-body">
+                <p><strong id="conflict-user-name">Seseorang</strong> baru saja mengubah dan menyimpan dokumen ini saat Anda sedang mengetik.</p>
+                <p>Ketikan Anda yang belum tersimpan akan bertabrakan dengan perubahan mereka.</p>
+                <div style="display:flex; gap:10px; margin-top:20px; justify-content:flex-end;">
+                    <button class="btn-restore" style="background:#888;" onclick="resolveConflict('overwrite')">Paksakan Timpa</button>
+                    <button class="btn-restore" style="background:#ea4335;" onclick="resolveConflict('reload')">Muat Ketikan Mereka</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     @if ($isOwner)
         <div class="modal-overlay" id="share-modal">
@@ -256,27 +173,18 @@
 @section('scripts')
     <script>
         const USER_COLORS = [
-            '#ea4335', // merah
-            '#4285f4', // biru
-            '#fbbc05', // kuning
-            '#34a853', // hijau
-            '#9c27b0', // ungu
-            '#ff5722', // oranye
-            '#00bcd4', // cyan
-            '#e91e63', // pink
+            '#ea4335', '#4285f4', '#fbbc05', '#34a853', '#9c27b0', '#ff5722', '#00bcd4', '#e91e63'
         ];
 
         function getUserColor(userId) {
             return USER_COLORS[userId % USER_COLORS.length];
         }
 
-
         const editorEl = document.getElementById('editor');
         const titleInput = document.getElementById('doc-title');
         const saveStatus = document.getElementById('save-status');
         const onlineList = document.getElementById('online-list');
         const toast = document.getElementById('toast');
-
 
         const updateUrl = editorEl.dataset.updateUrl;
         const heartbeatUrl = editorEl.dataset.heartbeatUrl;
@@ -289,176 +197,40 @@
         const canEdit = editorEl.dataset.canEdit === '1';
         const isOwner = editorEl.dataset.isOwner === '1';
 
-
         let isTyping = false;
         let typingTimer = null;
-        let lastContent = '';
+        let lastContent = editorEl.value;
         let lastTitle = titleInput.value;
-        let ckEditor = null;
+        let lastTimestamp = {{ $document->updated_at->timestamp }};
+        let isConflictMode = false;
+        let incomingConflictContent = '';
+        let incomingConflictTitle = '';
 
+        let lastSaveTime = 0;
 
-        let myCursorTop = 0;
-        let myCursorLeft = 0;
+        if (canEdit) {
+            editorEl.addEventListener('input', () => {
+                isTyping = true;
+                clearTimeout(typingTimer);
 
-        ClassicEditor
-            .create(editorEl, {
-                toolbar: {
-                    items: [
-                        'heading', '|',
-                        'fontFamily', 'fontSize', '|',
-                        'bold', 'italic', 'underline', 'strikethrough',
-                        'fontColor', 'fontBackgroundColor', '|',
-                        'alignment', '|',
-                        'bulletedList', 'numberedList', 'outdent', 'indent', '|',
-                        'link', 'blockQuote', 'insertTable', 'horizontalLine', '|',
-                        'code', 'codeBlock', '|',
-                        'removeFormat', '|',
-                        'undo', 'redo',
-                    ],
-                    shouldNotGroupWhenFull: true,
-                },
-                heading: {
-                    options: [{
-                            model: 'paragraph',
-                            title: 'Normal',
-                            class: 'ck-heading_paragraph'
-                        },
-                        {
-                            model: 'heading1',
-                            view: 'h1',
-                            title: 'Judul 1',
-                            class: 'ck-heading_heading1'
-                        },
-                        {
-                            model: 'heading2',
-                            view: 'h2',
-                            title: 'Judul 2',
-                            class: 'ck-heading_heading2'
-                        },
-                        {
-                            model: 'heading3',
-                            view: 'h3',
-                            title: 'Judul 3',
-                            class: 'ck-heading_heading3'
-                        },
-                    ],
-                },
-                fontFamily: {
-                    options: [
-                        'default',
-                        'Arial, Helvetica, sans-serif',
-                        'Times New Roman, Times, serif',
-                        'Courier New, Courier, monospace',
-                        'Georgia, serif',
-                        'Verdana, Geneva, sans-serif',
-                        'Tahoma, Geneva, sans-serif',
-                        'Trebuchet MS, Helvetica, sans-serif',
-                        'Impact, Charcoal, sans-serif',
-                    ],
-                    supportAllValues: true,
-                },
-                fontSize: {
-                    options: [8, 9, 10, 11, 12, 14, 16, 18, 20, 22, 24, 26, 28, 36, 48, 72],
-                    supportAllValues: true,
-                },
-                table: {
-                    contentToolbar: ['tableColumn', 'tableRow', 'mergeTableCells',
-                        'tableProperties', 'tableCellProperties'
-                    ],
-                },
-            })
-            .then(editor => {
-                ckEditor = editor;
-                lastContent = editor.getData();
-
-                if (!canEdit) {
-                    editor.enableReadOnlyMode('permission');
+                const now = Date.now();
+                if (now - lastSaveTime > 1000) {
+                    autoSave();
+                    lastSaveTime = now;
                 }
 
-
-                const ckMain = document.querySelector('.ck-editor__main');
-                const editable = document.querySelector('.ck-editor__editable');
-                ckMain.style.position = 'relative';
-
-
-                const zoomWrapper = document.createElement('div');
-                zoomWrapper.id = 'editor-zoom-wrapper';
-                ckMain.parentNode.insertBefore(zoomWrapper, ckMain);
-                zoomWrapper.appendChild(ckMain);
-
-                const overlay = document.createElement('div');
-                overlay.id = 'cursor-overlay';
-                ckMain.appendChild(overlay);
-
-
-                function repositionOverlay() {
-                    const ed = document.querySelector('.ck-editor__editable');
-                    if (!ed) return;
-                    overlay.style.position = 'absolute';
-                    overlay.style.top = ed.offsetTop + 'px';
-                    overlay.style.left = ed.offsetLeft + 'px';
-                    overlay.style.width = ed.offsetWidth + 'px';
-                    overlay.style.height = '10000px';
-                    overlay.style.pointerEvents = 'none';
-                    overlay.style.zIndex = '50';
-                    overlay.style.overflow = 'visible';
-                }
-                repositionOverlay();
-                window.addEventListener('resize', repositionOverlay);
-                applyPageLayout();
-                setTimeout(repositionOverlay, 200);
-
-                window.updateMyCursorPosition = function() {
-                    try {
-                        const domSel = window.getSelection();
-                        if (!domSel || domSel.rangeCount === 0) return;
-
-                        const range = domSel.getRangeAt(0);
-                        const rect = range.getBoundingClientRect();
-                        if (rect.width === 0 && rect.height === 0) return;
-
-                        const ed = document.querySelector('.ck-editor__editable');
-                        const edRect = ed.getBoundingClientRect();
-                        const zoom = pageZoom / 100;
-
-                        myCursorTop = (rect.top - edRect.top) / zoom;
-                        myCursorLeft = (rect.left - edRect.left) / zoom;
-                    } catch (e) {}
-                };
-
-                editor.editing.view.document.on('selectionChange', window.updateMyCursorPosition);
-
-                let lastSaveTime = 0;
-                editor.model.document.on('change:data', () => {
-                    isTyping = true;
-                    clearTimeout(typingTimer);
-
-                    const now = Date.now();
-                    if (now - lastSaveTime > 1000) {
-                        autoSave();
-                        lastSaveTime = now;
-                    }
-
-                    typingTimer = setTimeout(() => {
-                        isTyping = false;
-                        autoSave();
-                        lastSaveTime = Date.now();
-                    }, 800);
-                });
-
-                sendHeartbeat();
-                pollServer();
-
-                setInterval(sendHeartbeat, 1000);
-                setInterval(pollServer, 1000);
-            })
-            .catch(err => console.error('CKEditor gagal:', err));
+                typingTimer = setTimeout(() => {
+                    isTyping = false;
+                    autoSave();
+                    lastSaveTime = Date.now();
+                }, 800);
+            });
+        }
 
         titleInput.addEventListener('input', () => {
             isTyping = true;
             clearTimeout(typingTimer);
 
-            const now = Date.now();
             typingTimer = setTimeout(() => {
                 isTyping = false;
                 autoSave();
@@ -466,9 +238,9 @@
         });
 
         async function autoSave() {
-            if (!ckEditor) return;
+            if (isConflictMode) return;
 
-            const content = ckEditor.getData();
+            const content = editorEl.value;
             const title = titleInput.value;
 
             if (content === lastContent && title === lastTitle) return;
@@ -493,9 +265,11 @@
                 if (data.success) {
                     lastContent = content;
                     lastTitle = title;
+                    if (data.updated_at_timestamp) {
+                        lastTimestamp = data.updated_at_timestamp;
+                    }
                     saveStatus.textContent = '✓ Tersimpan ' + data.updated_at;
                     saveStatus.className = 'save-status saved';
-                    setTimeout(pollServer, 100);
                 }
             } catch (e) {
                 saveStatus.textContent = 'Gagal menyimpan';
@@ -503,35 +277,82 @@
             }
         }
 
+        function showConflictModal(editorName, content, title) {
+            isConflictMode = true;
+            incomingConflictContent = content;
+            incomingConflictTitle = title;
+            document.getElementById('conflict-user-name').textContent = editorName;
+            document.getElementById('conflict-modal').classList.add('open');
+        }
+
+        function resolveConflict(action) {
+            document.getElementById('conflict-modal').classList.remove('open');
+            isConflictMode = false;
+            
+            if (action === 'reload') {
+                const selStart = editorEl.selectionStart;
+                const selEnd = editorEl.selectionEnd;
+                
+                editorEl.value = incomingConflictContent;
+                titleInput.value = incomingConflictTitle;
+                lastContent = incomingConflictContent;
+                lastTitle = incomingConflictTitle;
+                
+                editorEl.setSelectionRange(selStart, selEnd);
+                
+                saveStatus.textContent = 'Diperbarui ke versi terbaru';
+                saveStatus.className = 'save-status saved';
+            } else {
+                autoSave();
+            }
+        }
+
         async function pollServer() {
+            if (isConflictMode) return;
             try {
                 const res = await fetch(pollUrl);
                 const data = await res.json();
 
                 updateOnlineList(data.online_users, data.current_user_id);
-                renderRemoteCursors(data.online_users, data.current_user_id);
+                // Cursor melayang dihilangkan untuk TXT editor agar lebih simpel
+                // renderRemoteCursors tidak dipanggil lagi
 
-                if (!isTyping && ckEditor && data.content !== lastContent) {
-                    ckEditor.setData(data.content);
+                if (data.updated_at_timestamp && data.updated_at_timestamp > lastTimestamp) {
+                    if (data.last_editor && data.last_editor.id !== currentUserId) {
+                        const currentContent = editorEl.value;
+                        if (currentContent !== data.content && currentContent !== lastContent) {
+                            showConflictModal(data.last_editor.name, data.content, data.title);
+                            lastTimestamp = data.updated_at_timestamp;
+                            return;
+                        }
+                    }
+                    lastTimestamp = data.updated_at_timestamp;
+                }
+
+                if (!isTyping && data.content !== lastContent) {
+                    const selStart = editorEl.selectionStart;
+                    const selEnd = editorEl.selectionEnd;
+                    
+                    editorEl.value = data.content;
                     lastContent = data.content;
 
                     if (data.title !== titleInput.value) {
                         titleInput.value = data.title;
                         lastTitle = data.title;
                     }
+                    
+                    if (document.activeElement === editorEl) {
+                        editorEl.setSelectionRange(selStart, selEnd);
+                    }
 
                     saveStatus.textContent = '↺ Diperbarui ' + data.updated_at;
                     saveStatus.className = 'save-status saved';
                 }
-
             } catch (e) {}
         }
 
         async function sendHeartbeat() {
             try {
-                if (typeof window.updateMyCursorPosition === 'function') {
-                    window.updateMyCursorPosition();
-                }
                 await fetch(heartbeatUrl, {
                     method: 'POST',
                     headers: {
@@ -539,8 +360,8 @@
                         'X-CSRF-TOKEN': csrfToken,
                     },
                     body: JSON.stringify({
-                        cursor_top: myCursorTop,
-                        cursor_left: myCursorLeft,
+                        cursor_top: 0,
+                        cursor_left: 0,
                     }),
                 });
             } catch (e) {}
@@ -556,6 +377,7 @@
             users.forEach(user => {
                 const isMe = user.id === myId;
                 const color = getUserColor(user.id);
+                // Kita tambahkan teks "sedang mengetik" kalau last_seen baru saja
                 html += `
             <div class="online-user">
                 <div class="online-dot" style="background:${color};"></div>
@@ -566,59 +388,10 @@
             onlineList.innerHTML = html;
         }
 
-        function renderRemoteCursors(users, myId) {
-            const overlay = document.getElementById('cursor-overlay');
-            if (!overlay) return;
-
-            if (!users) {
-                overlay.innerHTML = '';
-                return;
-            }
-
-            const activeIds = new Set();
-
-            users.forEach(user => {
-                if (user.id === myId) return;
-                if (user.cursor_top == null || user.cursor_left == null) return;
-                if (user.cursor_top === 0 && user.cursor_left === 0) return;
-
-                activeIds.add(user.id);
-                const cursorId = 'cursor-user-' + user.id;
-                let cursorEl = document.getElementById(cursorId);
-
-                if (!cursorEl) {
-                    const color = getUserColor(user.id);
-                    cursorEl = document.createElement('div');
-                    cursorEl.id = cursorId;
-                    cursorEl.className = 'remote-cursor';
-
-                    const label = document.createElement('div');
-                    label.className = 'remote-cursor-label';
-                    label.textContent = user.name;
-                    label.style.background = color;
-
-                    const caret = document.createElement('div');
-                    caret.className = 'remote-cursor-caret';
-                    caret.style.background = color;
-
-                    cursorEl.appendChild(label);
-                    cursorEl.appendChild(caret);
-                    overlay.appendChild(cursorEl);
-                }
-
-                cursorEl.style.top = user.cursor_top + 'px';
-                cursorEl.style.left = user.cursor_left + 'px';
-            });
-
-            Array.from(overlay.children).forEach(child => {
-                if (child.id && child.id.startsWith('cursor-user-')) {
-                    const idStr = child.id.replace('cursor-user-', '');
-                    if (!activeIds.has(parseInt(idStr))) {
-                        overlay.removeChild(child);
-                    }
-                }
-            });
-        }
+        setInterval(sendHeartbeat, 1000);
+        setInterval(pollServer, 1000);
+        sendHeartbeat();
+        pollServer();
 
         async function saveVersion() {
             await autoSave();

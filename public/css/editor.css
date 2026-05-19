@@ -76,87 +76,29 @@ body {
     position: relative;
 }
 
-.ck.ck-toolbar {
-    background: #fff !important;
-    border: none !important;
-    border-bottom: 1px solid #e0e0e0 !important;
-    padding: 4px 8px !important;
-    border-radius: 0 !important;
-}
-
-.ck.ck-editor {
-    display: flex;
-    flex-direction: column;
+.txt-editor {
     flex: 1;
+    width: 100%;
+    height: 100%;
+    margin: 0 auto;
+    max-width: 900px;
+    background: white;
+    border: 1px solid #ccc;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    border-radius: 4px;
+    padding: 30px;
+    font-size: 15px;
+    line-height: 1.6;
+    color: #333;
+    font-family: 'Courier New', Courier, monospace;
+    resize: none;
+    outline: none;
+    transition: box-shadow 0.2s;
 }
 
-.ck.ck-editor__main {
-    flex: 1;
-    overflow-y: auto;
-    background: #f5f5f5;
-    padding: 24px;
-    position: relative;
-}
-
-.ck.ck-editor__editable_inline {
-    margin: 0 auto !important;
-    background: white !important;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.13) !important;
-    border-radius: 1px !important;
-    border: none !important;
-    width: 794px;
-    padding: 96px 96px !important;
-    min-height: 1123px;
-    font-size: 14px !important;
-    line-height: 1.5 !important;
-    color: #212121;
-    font-family: 'Times New Roman', serif !important;
-    transition: width 0.2s, padding 0.2s;
-}
-
-.ck.ck-editor__editable.ck-focused {
-    box-shadow: 0 2px 10px rgba(66,133,244,0.15) !important;
-    outline: none !important;
-}
-
-#cursor-overlay {
-    pointer-events: none;
-    z-index: 50;
-}
-
-.remote-cursor {
-    position: absolute;
-    pointer-events: none;
-    transform: translateY(-2px);
-    z-index: 60;
-    transition: top 0.4s ease-out, left 0.4s ease-out;
-}
-
-.remote-cursor-label {
-    position: absolute;
-    bottom: 100%;
-    left: 0;
-    font-size: 11px;
-    font-weight: 700;
-    color: white;
-    padding: 2px 7px;
-    border-radius: 3px 3px 3px 0;
-    white-space: nowrap;
-    font-family: 'Segoe UI', Arial, sans-serif;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-    margin-bottom: 2px;
-}
-
-.remote-cursor-caret {
-    width: 2px;
-    height: 20px;
-    border-radius: 1px;
-    animation: cursor-blink 1s step-end infinite;
-}
-
-@keyframes cursor-blink {
-    0%, 100% { opacity: 1; }
-    50%       { opacity: 0; }
+.txt-editor:focus {
+    box-shadow: 0 2px 10px rgba(66,133,244,0.2);
+    border-color: #4285f4;
 }
 
 .sidebar {

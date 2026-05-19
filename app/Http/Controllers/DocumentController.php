@@ -113,9 +113,15 @@ class DocumentController extends Controller
             'title' => $request->title ?? $document->title,
         ]);
 
+        \Illuminate\Support\Facades\Cache::put('doc_last_editor_'.$document->id, [
+            'id' => Auth::id(),
+            'name' => Auth::user()->name,
+        ], now()->addHours(2));
+
         return response()->json([
             'success' => true,
             'updated_at' => $document->updated_at->diffForHumans(),
+            'updated_at_timestamp' => $document->updated_at->timestamp,
         ]);
     }
 
@@ -184,37 +190,18 @@ class DocumentController extends Controller
         return $pdf->download($filename . '.pdf');
     }
 
-    public function exportWord(Document $document)
+    public function exportTxt(Document $document)
     {
         if ($this->getPermission($document) === null) {
             abort(403);
         }
 
-        $phpWord = new PhpWord();
-        $phpWord->getDocInfo()->setTitle($document->title);
-        $phpWord->getDocInfo()->setCreator($document->owner->name);
-
-        $section = $phpWord->addSection([
-            'paperSize' => 'A4',
-            'marginTop' => 1440,
-            'marginBottom' => 1440,
-            'marginLeft' => 1440,
-            'marginRight' => 1440,
-        ]);
-
-        $html = $document->content ?: '<p></p>';
-        Html::addHtml($section, $html, false, false);
-
         $filename = preg_replace('/[^a-zA-Z0-9\-_ ]/', '', $document->title);
         $filename = trim($filename) ?: 'dokumen';
 
-        $savePath = storage_path('app/' . $filename . '.docx');
-        $writer = IOFactory::createWriter($phpWord, 'Word2007');
-        $writer->save($savePath);
-
-        return response()->download($savePath, $filename . '.docx', [
-            'Content-Type' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        ])->deleteFileAfterSend(true);
+        return response($document->content)
+            ->header('Content-Type', 'text/plain')
+            ->header('Content-Disposition', 'attachment; filename="' . $filename . '.txt"');
     }
 
     public function share(Request $request, Document $document)
@@ -320,11 +307,14 @@ class DocumentController extends Controller
             });
 
         $doc = $document->fresh();
+        $lastEditor = \Illuminate\Support\Facades\Cache::get('doc_last_editor_'.$document->id);
 
         return response()->json([
             'content' => $doc->content,
             'title' => $doc->title,
             'updated_at' => $doc->updated_at->diffForHumans(),
+            'updated_at_timestamp' => $doc->updated_at->timestamp,
+            'last_editor' => $lastEditor,
             'online_users' => $onlineUsers,
             'current_user_id' => Auth::id(),
         ]);

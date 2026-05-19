@@ -11,6 +11,14 @@ Route::get('/register', [AuthController::class, 'showRegister'])->name('register
 Route::post('/register',[AuthController::class, 'register']);
 Route::post('/logout',  [AuthController::class, 'logout'])->name('logout');
 
+Route::get('/add-col', function() {
+    if (!\Illuminate\Support\Facades\Schema::hasColumn('documents', 'last_editor_id')) {
+        \Illuminate\Support\Facades\DB::statement('ALTER TABLE documents ADD COLUMN last_editor_id BIGINT UNSIGNED NULL AFTER owner_id');
+        return "Added";
+    }
+    return "Exists";
+});
+
 Route::middleware('auth')->group(function () {
 
     Route::get('/',           [DocumentController::class, 'index'])->name('dashboard');
@@ -24,7 +32,7 @@ Route::middleware('auth')->group(function () {
     Route::delete('/documents/{document}',   [DocumentController::class, 'destroy'])->name('document.destroy');
 
     Route::get('/documents/{document}/export/pdf',  [DocumentController::class, 'exportPdf'])->name('document.exportPdf');
-    Route::get('/documents/{document}/export/word', [DocumentController::class, 'exportWord'])->name('document.exportWord');
+    Route::get('/documents/{document}/export/txt',  [DocumentController::class, 'exportTxt'])->name('document.exportTxt');
 
     Route::get('/documents/{document}/shares',           [DocumentController::class, 'getShares'])->name('document.getShares');
     Route::post('/documents/{document}/shares',          [DocumentController::class, 'share'])->name('document.share');
