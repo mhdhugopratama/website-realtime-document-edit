@@ -36,7 +36,6 @@ Route::middleware('auth')->group(function () {
     Route::get('/documents/{document}/export/pdf',  [DocumentController::class, 'exportPdf'])->name('document.exportPdf');
     Route::get('/documents/{document}/export/txt',  [DocumentController::class, 'exportTxt'])->name('document.exportTxt');
 
-    Route::get('/documents/{document}/shares',           [DocumentController::class, 'getShares'])->name('document.getShares');
     Route::post('/documents/{document}/shares',          [DocumentController::class, 'share'])->name('document.share');
     Route::delete('/documents/{document}/shares/{user}', [DocumentController::class, 'removeShare'])->name('document.removeShare');
 
@@ -44,6 +43,5 @@ Route::middleware('auth')->group(function () {
     Route::post('/documents/{document}/restore/{version}', [DocumentController::class, 'restoreVersion'])->name('document.restoreVersion');
 
     Route::post('/api/documents/{document}/update',    [DocumentController::class, 'update'])->name('document.update');
-    Route::post('/api/documents/{document}/heartbeat', [DocumentController::class, 'heartbeat'])->name('document.heartbeat');
     Route::post('/api/documents/{document}/poll',       [DocumentController::class, 'poll'])->name('document.poll');
 });
